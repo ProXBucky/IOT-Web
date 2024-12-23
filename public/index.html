@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Door System</title>
+
+    <style>
+        .toggle-panels-btn {
+            display: none;
+            position: absolute;
+            bottom: 10px;
+            left: 25%;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 30px;
+            font-family: 'Arial', sans-serif;
+            background-color: #f0f0f5;
+            margin: 0;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #openDoorBtn {
+            margin-bottom: 10px;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 1400px;
+            height: auto;
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0px 10px 20px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            overflow: hidden;
+            transition: transform 0.3s ease;
+        }
+
+        .left-panel,
+        .right-panel {
+            width: 45%;
+            margin: 10px;
+            padding: 20px;
+            border-radius: 10px;
+            background-color: #f7f7f7;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+            overflow-y: auto;
+            max-height: 65vh;
+            transition: width 0.3s ease, opacity 0.3s ease;
+            /* Thêm hiệu ứng chuyển động */
+        }
+
+        h1 {
+            color: #0078d4;
+            font-size: 32px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        h2 {
+            color: #333;
+            font-size: 24px;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            box-sizing: border-box;
+            transition: all 0.3s ease;
+        }
+
+        input:focus {
+            border-color: #0078d4;
+            outline: none;
+        }
+
+        button {
+            padding: 8px 12px;
+            background-color: #0078d4;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th,
+        td {
+            padding: 12px;
+            text-align: center;
+            border: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #0078d4;
+            color: white;
+        }
+
+        tr:hover td {
+            background-color: #f1f1f1;
+        }
+
+        .form-group label {
+            font-weight: bold;
+            color: #333;
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+
+        .form-group input {
+            margin-top: 5px;
+        }
+
+        #createUserResponse {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #0078d4;
+            color: white;
+            font-size: 16px;
+            border-radius: 8px;
+            display: none;
+        }
+
+        #createUserResponse.error {
+            background-color: #dc3545;
+        }
+
+        #fetchLogsBtn {
+            padding: 10px 18px;
+            background-color: #0078d4;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        #fetchLogsBtn:hover {
+            background-color: #0056b3;
+        }
+
+        .message {
+            font-size: 16px;
+            color: #fff;
+            font-weight: bold;
+        }
+
+        #logs-table,
+        .user-table {
+            overflow-y: auto;
+        }
+
+        .border-cc {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+
+
+        @media screen and (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .left-panel,
+            .right-panel {
+                flex: 1 1 100%;
+                margin: 5px 0;
+            }
+
+            h1 {
+                font-size: 28px;
+            }
+
+            h2 {
+                font-size: 20px;
+            }
+
+            button {
+                width: 100%;
+                padding: 10px 0;
+                font-size: 18px;
+            }
+
+            table {
+                font-size: 14px;
+            }
+        }
+
+
+        @media screen and (max-width: 480px) {
+
+            body {
+                display: flex;
+                flex-direction: column;
+                justify-content: start;
+                align-items: center;
+                padding: 8px;
+                font-family: 'Arial', sans-serif;
+                background-color: #f0f0f5;
+                margin: 0;
+                height: 100vh;
+                overflow: hidden;
+            }
+
+            #fetchLogsBtn {
+                padding: 6px 8px;
+                width: 20%;
+            }
+
+            .container {
+                flex-direction: column;
+                height: 70vh;
+                /* Các panel sẽ xếp theo chiều dọc */
+            }
+
+            .left-panel,
+            .right-panel {
+                padding: 0;
+            }
+
+            /* Khi lớp 'first' được thêm vào, right-panel chiếm toàn bộ không gian và left-panel ẩn đi */
+            .container.first .right-panel {
+                display: block;
+                transform: translateY(0);
+                width: 100%;
+                height: 100vh;
+            }
+
+            .container.first .left-panel {
+                display: none;
+                transform: translateY(-100%);
+                width: 0%;
+                height: 0%;
+            }
+
+            /* Khi lớp 'second' được thêm vào, left-panel chiếm toàn bộ không gian và right-panel ẩn đi */
+            .container.second .left-panel {
+                display: block;
+                transform: translateY(0);
+                width: 100%;
+                height: 100%;
+            }
+
+            .container.second .right-panel {
+                display: none;
+                transform: translateY(100%);
+                width: 0%;
+                height: 0%;
+            }
+
+            /* Nút toggle */
+            .toggle-panels-btn {
+                display: block;
+                width: 50%;
+                margin-top: 5px;
+                padding: 10px;
+                background-color: #0078d4;
+                color: white;
+                border: none;
+                cursor: pointer;
+            }
+
+            .toggle-panels-btn:hover {
+                background-color: #0056b3;
+            }
+        }
+    </style>
+
+
+</head>
+
+<body>
+    <h1>Hệ thống cửa thông minh</h1>
+    <button id="openDoorBtn">Mở cửa</button>
+    <div class="container">
+        <div class="left-panel">
+            <div id="create-user">
+                <h2>Tạo người dùng mới</h2>
+                <div class="form-group">
+                    <label for="name">Tên Người Dùng:</label>
+                    <input type="text" id="name" placeholder="Nhập tên người dùng" required>
+                </div>
+                <div class="form-group">
+                    <label for="pin_code">Mã PIN:</label>
+                    <input type="text" id="pin_code" placeholder="Nhập mã PIN (4 chữ số nếu có)">
+                </div>
+                <div class="form-group">
+                    <label for="rfid_code">Mã RFID:</label>
+                    <input type="text" id="rfid_code" placeholder="Nhập mã RFID (nếu có)">
+                </div>
+                <button id="createUserBtn">Tạo Người Dùng</button>
+                <div id="createUserResponse" class="message"></div>
+            </div>
+
+            <div id="user-list">
+                <h2>Danh sách người dùng</h2>
+                <div id="user-table">
+                    <table id="users-table">
+                        <thead>
+                            <tr>
+                                <th>Tên</th>
+                                <th>Mã PIN</th>
+                                <th>Mã RFID</th>
+                                <th>Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="right-panel">
+            <div class="border-cc">
+                <h2>Lịch sử mở cửa</h2>
+                <button id="fetchLogsBtn"><i class="fas fa-sync-alt"></i></button>
+            </div>
+            <div id="logs-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Tên Người Dùng</th>
+                            <th>Thời Gian</th>
+                            <th>Loại</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logs"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <button class="toggle-panels-btn">Đổi chức năng</button>
+    </div>
+
+    <script>
+        let toggleCount = 0;
+        const container = document.querySelector('.container');
+        container.classList.add('first');
+        document.querySelector('.toggle-panels-btn').addEventListener('click', function () {
+            const container = document.querySelector('.container');
+            if (toggleCount % 2 !== 0) {
+                container.classList.remove('second')
+                container.classList.add('first');
+            } else {
+                container.classList.remove('first')
+                container.classList.add('second');
+            }
+
+            toggleCount++;
+        });
+
+        async function fetchUsers() {
+            const response = await fetch('/users');
+            const users = await response.json();
+            const usersList = document.getElementById('users');
+            usersList.innerHTML = '';
+            users.forEach(user => {
+                const row = document.createElement('tr');
+                row.innerHTML = `  
+                    <td>${user.name}</td>
+                    <td>${user.pin_code || 'N/A'}</td>
+                    <td>${user.rfid_code || 'N/A'}</td>
+                    <td><button onclick="deleteUser(${user.id})">Xóa</button></td>
+                `;
+                usersList.appendChild(row);
+            });
+        }
+
+        async function deleteUser(userId) {
+            if (confirm('Bạn có chắc chắn muốn xóa người dùng này và lịch sử mở cửa của họ không?')) {
+                const response = await fetch(`/users/${userId}`, { method: 'DELETE' });
+                const data = await response.json();
+                if (response.ok) {
+                    alert(data.message);
+                    fetchUsers(); // Cập nhật lại danh sách người dùng sau khi xóa
+                } else {
+                    alert(data.error);
+                }
+            }
+        }
+
+        async function fetchLogs() {
+            const response = await fetch('/access-logs');
+            const logs = await response.json();
+            const logsList = document.getElementById('logs');
+            logsList.innerHTML = '';
+            logs.forEach(log => {
+                const row = document.createElement('tr');
+                row.innerHTML = ` 
+                    <td>${log.name}</td>
+                    <td>${log.access_time}</td>
+                    <td>${log.access_type}</td>
+                `;
+                logsList.appendChild(row);
+            });
+        }
+
+        document.getElementById('createUserBtn').addEventListener('click', async () => {
+            const name = document.getElementById('name').value;
+            const pin_code = document.getElementById('pin_code').value || null;
+            const rfid_code = document.getElementById('rfid_code').value || null;
+
+            if (name && (pin_code || rfid_code)) {
+                const response = await fetch('/users', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ name, pin_code, rfid_code })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    displayCreateUserMessage(`Người dùng ${data.name} đã được tạo thành công!`);
+                    fetchUsers();
+                } else {
+                    displayCreateUserMessage(data.error, 'error');
+                }
+            } else {
+                displayCreateUserMessage('Vui lòng điền tên người dùng và ít nhất một mã PIN hoặc mã RFID!', 'error');
+            }
+        });
+
+        document.getElementById('fetchLogsBtn').addEventListener('click', fetchLogs);
+
+        function displayCreateUserMessage(message, type = 'success') {
+            const messageDiv = document.getElementById('createUserResponse');
+            messageDiv.textContent = message;
+            messageDiv.className = type === 'error' ? 'error' : 'success';
+            setTimeout(() => messageDiv.textContent = '', 3000);
+        }
+
+        document.getElementById('openDoorBtn').addEventListener('click', async () => {
+            try {
+                const response = await fetch('/open-door-manually', {
+                    method: 'POST',
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('Cửa đã được mở!');
+                } else {
+                    alert('Đã xảy ra lỗi khi mở cửa.');
+                }
+            } catch (error) {
+                console.error('Lỗi kết nối:', error);
+                alert('Không thể kết nối đến máy chủ.');
+            }
+        });
+
+
+        // Khởi động fetch users và logs khi load trang
+        fetchUsers();
+        fetchLogs();
+    </script>
+</body>
+
+</html>
