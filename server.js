@@ -3,10 +3,20 @@ const bodyParser = require('body-parser');
 const { Pool } = require('pg');
 const path = require('path');
 const fetch = require('node-fetch');
+const bcrypt = require('bcrypt');
+const session = require('express-session');
 
 const app = express();
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(bodyParser.json());
+
+// Sử dụng session
+app.use(session({
+    secret: 'secretKey123',
+    resave: false,
+    saveUninitialized: false,
+    cookie: { secure: false },
+}));
 
 // Middleware to log API calls
 app.use((req, res, next) => {
@@ -22,13 +32,74 @@ const pool = new Pool({
     port: 5432,
 });
 
+// Middleware kiểm tra đăng nhập
+const requireLogin = (req, res, next) => {
+    if (!req.session.userId) {
+        return res.status(401).json({ message: 'Bạn cần đăng nhập để truy cập' });
+    }
+    next();
+};
+
+// Đăng ký
+app.post('/register', async (req, res) => {
+    const { username, password } = req.body;
+    try {
+        const existingUser = await pool.query('SELECT * FROM admins WHERE username = $1', [username]);
+        if (existingUser.rows.length > 0) {
+            return res.status(400).json({ error: 'Tên người dùng đã tồn tại' });
+        }
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const result = await pool.query(
+            'INSERT INTO admins (username, password) VALUES ($1, $2) RETURNING *',
+            [username, hashedPassword]
+        );
+
+        res.json({ message: 'Đăng ký thành công', user: result.rows[0] });
+    } catch (error) {
+        res.status(500).json({ error: 'Đã xảy ra lỗi khi đăng ký' });
+    }
+});
+
+// Đăng nhập
+app.post('/login', async (req, res) => {
+    const { username, password } = req.body;
+    try {
+        const result = await pool.query('SELECT * FROM admins WHERE username = $1', [username]);
+        const user = result.rows[0];
+        if (!user) {
+            return res.status(401).json({ message: 'Tên đăng nhập không tồn tại' });
+        }
+        const passwordMatch = await bcrypt.compare(password, user.password);
+        if (!passwordMatch) {
+            return res.status(401).json({ message: 'Mật khẩu không đúng' });
+        }
+        req.session.userId = user.id;
+        req.session.username = user.username;
+
+        res.json({ message: 'Đăng nhập thành công', user: { id: user.id, name: user.username } });
+    } catch (error) {
+        res.status(500).json({ error: 'Đã xảy ra lỗi khi đăng nhập' });
+    }
+});
+
+// Đăng xuất
+app.post('/logout', (req, res) => {
+    req.session.destroy((err) => {
+        if (err) {
+            return res.status(500).json({ message: 'Không thể đăng xuất' });
+        }
+        res.clearCookie('connect.sid'); // Xóa cookie session nếu sử dụng cookie
+        res.status(200).json({ message: 'Đăng xuất thành công' });
+    });
+});
+
 // Lấy danh sách người dùng
-app.get('/users', async (req, res) => {
+app.get('/users', requireLogin, async (req, res) => {
     const users = await pool.query('SELECT * FROM users WHERE id != $1', [9]);
     res.json(users.rows);
 });
 
-app.post('/users', async (req, res) => {
+app.post('/users', requireLogin, async (req, res) => {
     const { name, pin_code, rfid_code } = req.body;
 
     // Kiểm tra mã PIN chỉ có 4 chữ số
@@ -58,7 +129,7 @@ app.post('/users', async (req, res) => {
 });
 
 // Mở cửa
-app.post('/open-door', async (req, res) => {
+app.post('/open-door', requireLogin, async (req, res) => {
     const { pin_code, rfid_code } = req.body;
     const userQuery = pin_code
         ? 'SELECT * FROM users WHERE pin_code = $1'
@@ -78,7 +149,7 @@ app.post('/open-door', async (req, res) => {
 });
 
 // Lịch sử mở cửa
-app.get('/access-logs', async (req, res) => {
+app.get('/access-logs', requireLogin, async (req, res) => {
     try {
         const logs = await pool.query(`
             SELECT 
@@ -99,7 +170,7 @@ app.get('/access-logs', async (req, res) => {
 });
 
 // Xóa người dùng và lịch sử mở cửa của họ
-app.delete('/users/:id', async (req, res) => {
+app.delete('/users/:id', requireLogin, async (req, res) => {
     const userId = req.params.id;
     try {
         // Xóa lịch sử mở cửa của người dùng
@@ -114,36 +185,84 @@ app.delete('/users/:id', async (req, res) => {
     }
 });
 
-app.post('/open-door-manually', async (req, res) => {
+app.post('/open-door-manually', requireLogin, async (req, res) => {
     try {
-        console.log('Sending request to ESP32 to open the door...');
-        const response = await fetch('http://192.168.0.115:80/open-door', {
+        const response = await fetch('http://192.168.90.44:80/open-door', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
         });
 
         if (response.ok) {
             console.log('ESP32 responded successfully');
-            const userQuery = 'SELECT * FROM users WHERE rfid_code = $1'
-            const code = 'ToiLaAdminNhe';
-            const user = await pool.query(userQuery, [code]);
+
+            const userId = req.session.userId;
+            const userQuery = 'SELECT * FROM admins WHERE id = $1';
+            const user = await pool.query(userQuery, [userId]);
 
             if (user.rows.length > 0) {
                 await pool.query(
                     'INSERT INTO access_logs (user_id, access_type) VALUES ($1, $2)',
-                    [user.rows[0].id, 'Admin']
+                    [userId, 'Admin']
                 );
-                return res.json({ message: 'Cửa đã mở', success: true }); // Phản hồi thành công
+                return res.json({ message: 'Cửa đã mở', success: true });
             } else {
-                return res.status(401).json({ message: 'Mã PIN hoặc mã RFID không hợp lệ' }); // Phản hồi không thành công
+                return res.status(401).json({ message: 'Người dùng không hợp lệ' });
             }
         } else {
-            console.log('Failed to open door. Response not OK.');
             return res.status(500).json({ success: false, message: 'Không thể mở cửa' });
         }
     } catch (error) {
         console.error('Lỗi:', error);
         return res.status(500).json({ success: false, message: 'Lỗi kết nối đến ESP32' });
+    }
+});
+
+// Kiểm tra trạng thái đăng nhập
+app.get('/check-login', (req, res) => {
+    if (req.session.userId) {
+        res.status(200).json({
+            loggedIn: true,
+            userId: req.session.userId,
+            username: req.session.username
+        });
+    } else {
+        res.status(200).json({ loggedIn: false });
+    }
+});
+
+let sensorData = { temperature: null, humidity: null };
+
+// Endpoint nhận dữ liệu cảm biến từ Arduino
+app.post('/sensor-data', (req, res) => {
+    const { temperature, humidity } = req.body;
+    if (typeof temperature === 'number' && typeof humidity === 'number') {
+        sensorData = { temperature, humidity, timestamp: new Date() };
+        console.log(`Received data: Temperature = ${temperature}, Humidity = ${humidity}`);
+
+        res.status(200).json({
+            success: true,
+            message: 'Data received',
+            temperature,
+            humidity
+        });
+    } else {
+        res.status(400).json({
+            success: false,
+            message: 'Invalid data format. Please send numeric values for temperature and humidity.'
+        });
+    }
+});
+
+// Endpoint trả về dữ liệu cảm biến cho frontend
+app.get('/sensor-data', (req, res) => {
+    if (sensorData.temperature !== null && sensorData.humidity !== null) {
+        res.json({
+            success: true,
+            temperature: sensorData.temperature,
+            humidity: sensorData.humidity
+        });
+    } else {
+        res.status(404).json({ success: false, message: 'No sensor data available' });
     }
 });
 
