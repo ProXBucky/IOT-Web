@@ -32,11 +32,17 @@ const pool = new Pool({
     port: 5432,
 });
 
+// const pool = new Pool({
+//     connectionString: 'postgresql://proxbucky:UXxvsLzyjiKokiAKPv4dn7vCCvXE955Y@dpg-ctn13rbv2p9s73ffq2lg-a.singapore-postgres.render.com/smartdoor',
+// });
+
+// postgresql://proxbucky:UXxvsLzyjiKokiAKPv4dn7vCCvXE955Y@dpg-ctn13rbv2p9s73ffq2lg-a/smartdoor
+
 // Middleware kiểm tra đăng nhập
 const requireLogin = (req, res, next) => {
-    if (!req.session.userId) {
-        return res.status(401).json({ message: 'Bạn cần đăng nhập để truy cập' });
-    }
+    // if (!req.session.userId) {
+    //     return res.status(401).json({ message: 'Bạn cần đăng nhập để truy cập' });
+    // }
     next();
 };
 

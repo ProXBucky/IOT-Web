@@ -1,4 +1,4 @@
-window.onload = checkLogin;
+// window.onload = checkLogin;
 let toggleCount = 0;
 const container = document.querySelector('.container');
 container.classList.add('first');
@@ -136,27 +136,27 @@ function showSystem() {
     system.style.display = 'flex';
 }
 
-async function checkLogin() {
-    try {
-        const response = await fetch('/check-login', {
-            method: 'GET',
-            credentials: 'include', // Cookie/session sẽ được sử dụng
-        });
-        const data = await response.json();  // Giả sử API trả về thông tin người dùng
+// async function checkLogin() {
+//     try {
+//         const response = await fetch('/check-login', {
+//             method: 'GET',
+//             credentials: 'include', // Cookie/session sẽ được sử dụng
+//         });
+//         const data = await response.json();  // Giả sử API trả về thông tin người dùng
 
-        if (data.loggedIn) {
-            document.getElementById('welcome-message').textContent = `Xin chào, ${data.username}`;
-            document.querySelector('.system').style.display = 'flex';
-            // fetchUsers();
-            // fetchLogs();
-        } else {
-            showLogin(); // Hiển thị giao diện đăng nhập nếu chưa đăng nhập
-        }
-    } catch (error) {
-        console.error('Lỗi khi kiểm tra trạng thái đăng nhập:', error);
-        showLogin();
-    }
-}
+//         if (data.loggedIn) {
+//             document.getElementById('welcome-message').textContent = `Xin chào, ${data.username}`;
+//             document.querySelector('.system').style.display = 'flex';
+//             // fetchUsers();
+//             // fetchLogs();
+//         } else {
+//             showLogin(); // Hiển thị giao diện đăng nhập nếu chưa đăng nhập
+//         }
+//     } catch (error) {
+//         console.error('Lỗi khi kiểm tra trạng thái đăng nhập:', error);
+//         showLogin();
+//     }
+// }
 
 document.getElementById('logoutBtn').addEventListener('click', async () => {
     const response = await fetch('/logout', { method: 'POST' });
@@ -253,7 +253,7 @@ setInterval(fetchSensorData, 7000);
 // Gọi lần đầu tiên khi trang được tải
 fetchSensorData();
 // Kiểm tra trạng thái đăng nhập khi tải trang
-checkLogin();
+// checkLogin();
 // Khởi động fetch users và logs khi load trang
 fetchUsers();
 fetchLogs();
